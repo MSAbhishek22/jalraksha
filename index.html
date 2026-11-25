@@ -224,6 +224,14 @@
   footer{color:var(--muted);font-size:13px;text-align:center;margin-top:26px}
   .hidden{display:none !important}
 </style>
+<style>
+.hero3d-wrap{position:relative;height:340px;min-height:260px;overflow:hidden;background:#0b1020;border-radius:18px;margin:18px auto;max-width:1100px}
+.hero3d-wrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero3d-cap{position:absolute;left:18px;bottom:36px;margin:0;color:#fff;font:600 14px/1.4 system-ui,-apple-system,sans-serif;text-shadow:0 1px 8px rgba(0,0,0,.65);z-index:2}
+.hero3d-cue{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);margin:0;color:rgba(255,255,255,.92);font:600 13px/1.4 system-ui,-apple-system,sans-serif;letter-spacing:.08em;text-transform:uppercase;z-index:2;animation:hero3dbob 2s ease-in-out infinite}
+@keyframes hero3dbob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,4px)}}
+@media(max-width:640px){.hero3d-wrap{height:280px;margin:12px}}
+</style>
 </head>
 <body>
 
@@ -235,6 +243,71 @@
     <div class="stats" id="stats"></div>
   </div>
 </header>
+<section class="hero3d-wrap" aria-label="3D scene — Water, watched — every handpump, every village.">
+  <canvas id="hero3d" aria-hidden="true"></canvas>
+  <p class="hero3d-cap">Water, watched — every handpump, every village.</p>
+  <p class="hero3d-cue">&#8595; Scroll to explore</p>
+</section>
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+/* J8 hero 3D — auto-starts on first load, no click needed. Three.js r149 CDN
+   with unpkg fallback. Pauses off-screen; renders one static frame when the
+   user prefers reduced motion. */
+(function(){
+  var canvas = document.getElementById('hero3d'); if(!canvas) return;
+  function start(){
+    if(!window.THREE){
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/three@0.149.0/build/three.min.js';
+      s.onload = start; document.head.appendChild(s); return;
+    }
+    var THREE = window.THREE;
+    var wrap = canvas.parentElement;
+    var renderer = new THREE.WebGLRenderer({canvas: canvas, antialias: true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    var scene = new THREE.Scene(); scene.background = new THREE.Color(0x06283d);
+    var camera = new THREE.PerspectiveCamera(45, 2, 0.1, 100);
+    camera.position.set(0, 4.2, 9);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    var dl = new THREE.DirectionalLight(0xffffff, 0.9); dl.position.set(4, 6, 6); scene.add(dl);
+    var dl2 = new THREE.DirectionalLight(0xffffff, 0.35); dl2.position.set(-5, -2, 4); scene.add(dl2);
+    camera.lookAt(0, 0, 0);
+    var wgeo = new THREE.PlaneGeometry(13, 7.5, 48, 28);
+    var water = new THREE.Mesh(wgeo,
+      new THREE.MeshStandardMaterial({color: 0x1f7fd1, roughness: 0.35, metalness: 0.1, flatShading: true}));
+    water.rotation.x = -Math.PI/2; water.position.y = -1.2; scene.add(water);
+    var base = wgeo.attributes.position.array.slice();
+    var drop = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 24),
+      new THREE.MeshStandardMaterial({color: 0xbfe3ff, roughness: 0.15, metalness: 0.1}));
+    drop.scale.y = 1.35; scene.add(drop);
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.04, 10, 60),
+      new THREE.MeshBasicMaterial({color: 0x7dd3fc, transparent: true, opacity: 0.7}));
+    ring.rotation.x = -Math.PI/2; ring.position.y = -1.1; scene.add(ring);
+
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var visible = true;
+    function size(){ var w=wrap.clientWidth, h=wrap.clientHeight; if(!w||!h) return;
+      renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); }
+    size(); window.addEventListener('resize', size);
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(function(en){ visible = en[0].isIntersecting; }, {threshold: 0}).observe(wrap);
+    }
+    var clock = new THREE.Clock();
+    function tick(t){ var p = wgeo.attributes.position;
+    for(var i=0;i<p.count;i++){ var x = base[i*3], y = base[i*3+1];
+      p.setZ(i, 0.28*Math.sin(x*0.8 + t*1.6) + 0.2*Math.cos(y*0.9 + t*1.2)); }
+    p.needsUpdate = true; wgeo.computeVertexNormals();
+    drop.position.y = 0.4 + Math.sin(t*1.6)*0.35;
+    var rs = 1 + (t % 2)*0.9; ring.scale.set(rs, rs, 1);
+    ring.material.opacity = 0.7*(1 - (t % 2)/2); }
+    function frame(){ requestAnimationFrame(frame); if(!visible) return; tick(clock.getElapsedTime()); renderer.render(scene, camera); }
+    if(reduced){ tick(0.6); renderer.render(scene, camera); } else { frame(); }
+  }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', start); }
+  else { start(); }
+})();
+</script>
+
 
 <div class="wrap">
 
